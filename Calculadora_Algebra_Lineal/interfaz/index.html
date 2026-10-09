@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Universidad Americana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: cabecera con logo ASCII, columna lateral con la memoria A/B (siempre visible) y un cuaderno de trabajo con pestañas por sesión del sílabo. */
+:root{
+  --bg:#EDF0F6; --panel:#FFFFFF; --panel2:#F5F7FB; --ink:#121B33; --muted:#59647F; --line:#D3DAE8;
+  --accent:#2646D6; --accent-ink:#FFFFFF; --pivot:#FFD84D; --pivot-ink:#3A2A00; --rowhl:#E4EAFF;
+  --ok:#11763F; --okbg:#DCF2E5; --bad:#B3222A; --badbg:#FBE2E3; --warn:#8A5A00; --warnbg:#FFF0CC;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C1222; --panel:#141C32; --panel2:#101830; --ink:#E7ECF8; --muted:#92A0C2; 
+  --line:#293456; --accent:#86A0FF; --accent-ink:#0C1222; --pivot:#8A6A00; --pivot-ink:#FFEDB0; --rowhl:#1D2850;
+  --ok:#62D6A0; --okbg:#10372A; --bad:#FF9096; --badbg:#3E1B21; --warn:#FFD36B; --warnbg:#3A2D0B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C1222; --panel:#141C32; --panel2:#101830; --ink:#E7ECF8; --muted:#92A0C2; --line:#293456;
+  --accent:#86A0FF; --accent-ink:#0C1222; --pivot:#8A6A00; --pivot-ink:#FFEDB0; --rowhl:#1D2850;
+  --ok:#62D6A0; --okbg:#10372A; --bad:#FF9096; --badbg:#3E1B21; --warn:#FFD36B; --warnbg:#3A2D0B; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);padding-inline:16px;padding-block:20px 56px}
+.wrap{max-width:1240px;margin-inline:auto;display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.wrap>*,.layout>*{min-width:0}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h2{font-size:1.35rem;font-weight:700} h3{font-size:1.02rem;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)} .mono{font-family:var(--mono)}
+header.top{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:center;justify-content:space-between}
+.brand h1{font-size:clamp(1.7rem,4vw,2.6rem);font-weight:800;letter-spacing:-.02em}
+.brand p{color:var(--muted);margin-top:6px;max-width:52ch}
+.logo{font:600 11px/1.15 var(--mono);color:var(--accent);margin:0;overflow-x:auto;max-width:100%;white-space:pre}
+.layout{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+aside.mem{position:sticky;top:12px;display:grid;gap:12px;max-height:calc(100vh - 24px);overflow:auto}
+@media (max-width:900px){aside.mem{position:static;max-height:none}}
+.mem-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font:500 12px var(--mono);padding:2px 9px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.pill.ok{background:var(--okbg);color:var(--ok);border-color:transparent}
+.pill.bad{background:var(--badbg);color:var(--bad);border-color:transparent}
+.pill.warn{background:var(--warnbg);color:var(--warn);border-color:transparent}
+.sizer{display:flex;gap:6px;align-items:center;font:500 12px var(--mono);color:var(--muted);flex-wrap:wrap}
+.sizer button{width:26px;height:26px;padding:0;border-radius:7px}
+.grid{display:grid;gap:5px;overflow-x:auto;padding-bottom:4px}
+.cell{width:100%;min-width:52px;font:500 14px var(--mono);padding:7px 6px;text-align:center;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:8px}
+.cell:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cell.invalid{border-color:var(--bad);background:var(--badbg)}
+input.txt,select{font:500 14px var(--mono);padding:7px 9px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:8px;min-width:0}
+button{font:600 13.5px var(--body);color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.ghost{background:transparent}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+nav.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+nav.tabs button{white-space:nowrap;border-radius:99px;padding:8px 14px}
+nav.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.panel{display:grid;gap:14px}
+.sec-sub{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.mb{margin:0;display:inline-grid;gap:6px;vertical-align:top}
+.mb figcaption{font:500 12px var(--mono);color:var(--muted)}
+.mx{position:relative;display:inline-grid;padding:6px 18px;font:500 14px var(--mono);font-variant-numeric:tabular-nums;column-gap:16px;row-gap:3px}
+.mx::before,.mx::after{content:"";position:absolute;top:0;bottom:0;width:9px;border:2px solid var(--accent)}
+.mx::before{left:0;border-right:none;border-radius:4px 0 0 4px}
+.mx::after{right:0;border-left:none;border-radius:0 4px 4px 0}
+.mx span{text-align:right;padding:2px 3px;border-radius:5px;min-width:1.6ch}
+.mx span.sep{border-left:2px dashed var(--muted);padding-left:12px;margin-left:-8px}
+.mx span.rowhl{background:var(--rowhl)}
+.mx span.piv{background:var(--pivot);color:var(--pivot-ink);font-weight:600}
+.mats{display:flex;flex-wrap:wrap;gap:18px 26px;align-items:flex-start}
+.op{font:600 22px var(--mono);align-self:center;color:var(--muted)}
+.msg{padding:10px 12px;border-radius:10px;font-weight:500}
+.msg.ok{background:var(--okbg);color:var(--ok)} .msg.bad{background:var(--badbg);color:var(--bad)}
+.msg.warn{background:var(--warnbg);color:var(--warn)} .msg.info{background:var(--panel2);border:1px solid var(--line)}
+.stepper{display:grid;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stepper .mx{justify-self:start}
+#out{display:grid;gap:14px;min-width:0}
+.stepper .desc{font:500 13px var(--mono)}
+.stepper input[type=range]{width:100%;accent-color:var(--accent)}
+.calc{font:500 13.5px/1.7 var(--mono);overflow-x:auto;white-space:pre;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+details{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--panel)}
+summary{cursor:pointer;font-weight:600}
+.prop{display:grid;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel)}
+.prop header{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.cases{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.case{display:grid;gap:8px;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel2)}
+.tree{font:500 13px/1.7 var(--mono);white-space:pre;overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+td,th{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+th{font:500 12px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+pre.code{margin:0;font:500 12.5px/1.55 var(--mono);overflow-x:auto;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.check{display:flex;gap:10px;align-items:flex-start;padding:6px 0}
+.check input{margin-top:4px;accent-color:var(--accent);width:16px;height:16px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--panel2)}
+.tile b{display:block;font:700 1.5rem var(--display)}
+@media (prefers-reduced-motion:no-preference){.panel>*{animation:in .25s ease both}@keyframes in{from{opacity:.4;transform:translateY(4px)}}}
+</style>
+</head><body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Universidad Americana</h1>
+      <p style="margin-top:8px"><span class="pill ok">● Cálculos ejecutados por el programa de Python</span></p>
+    </div>
+    <pre class="logo" aria-label="Logotipo ASCII Módulo III">  #   #  ###  ####  #   # #      ###      ##### ##### #####
+  ## ## #   # #   # #   # #     #   #       #     #     #
+  # # # #   # #   # #   # #     #   #       #     #     #
+  #   # #   # #   # #   # #     #   #       #     #     #
+  #   #  ###  ####   ###  #####  ###      ##### ##### #####
+  ----  A L G E B R A   D E   M A T R I C E S  ----</pre>
+  </header>
+
+  <div class="layout">
+    <aside class="mem card" aria-label="Memoria de matrices">
+      <div class="mem-head"><h2>Memoria</h2><span class="pill" id="memhint">vacía</span></div>
+      <div id="memA"></div>
+      <div id="memB"></div>
+      <div class="row">
+        <button data-act="swap">Intercambiar A ↔ B</button>
+        <button data-act="clear" class="ghost">Vaciar</button>
+      </div>
+      <p class="muted" style="font-size:13px">Acepta enteros, decimales y fracciones (<span class="mono">3, 0.5, -1/2</span>). Las celdas inválidas se marcan en rojo.</p>
+    </aside>
+
+    <main class="card" style="display:grid;gap:14px">
+      <nav class="tabs" role="tablist" id="tabs"></nav>
+      <section class="panel" id="view" aria-live="polite"></section>
+    </main>
+  </div>
+</div>
+
+<script>
+/* Cliente de la interfaz: solo dibuja y pide los cálculos a Python (/api/<acción>). */
+class ErrM extends Error {}
+const api=async(accion,datos={})=>{
+  let r;
+  try{r=await fetch('/api/'+accion,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(datos)})}
+  catch(e){throw new ErrM('No hay conexión con el programa de Python. Compruebe que main.py sigue ejecutándose.')}
+  const j=await r.json();
+  if(j.error)throw new ErrM(j.error);
+  return j;
+};
+
+/* ---------- Estado y persistencia ---------- */
+const EJ={A:[[0,0,0],[0,0,0],[0,0,0]],B:[[0,0,0],[0,0,0],[0,0,0]]};
+const S={tab:'ops',A:EJ.A.map(r=>r.map(String)),B:EJ.B.map(r=>r.map(String)),b:['0','0','0'],last:null,steps:{},out:{}};
+try{const s=JSON.parse(localStorage.getItem('calc-al')||'null');if(s&&s.A&&s.B){S.A=s.A;S.B=s.B;S.b=s.b||S.b;document.getElementById('memhint').textContent='memoria guardada'}}catch(e){}
+const persist=()=>{try{localStorage.setItem('calc-al',JSON.stringify({A:S.A,B:S.B,b:S.b}))}catch(e){}};
+const $=id=>document.getElementById(id);
+const valid=v=>/^[+-]?(\d+(\.\d+)?|\d+\s*\/\s*[+-]?\d+)$/.test(String(v).trim().replace(',','.'));
+
+/* ---------- Dibujo de matrices ---------- */
+const mx=(rows,o={})=>{
+  const cols=rows[0].length,[pr,pc]=o.pivot||[-1,-1];
+  let h=`<div class="mx" style="grid-template-columns:repeat(${cols},auto)">`;
+  rows.forEach((r,i)=>r.forEach((x,j)=>{
+    const cl=[j===o.sep?'sep':'',i===o.row?'rowhl':'',(i===pr&&j===pc)?'piv':''].filter(Boolean).join(' ');
+    h+=`<span class="${cl}">${x}</span>`;
+  }));
+  return h+'</div>';
+};
+const fig=(rows,cap,o={})=>`<figure class="mb"><figcaption>${cap}${o.sep==null?` · ${rows.length}×${rows[0].length}`:''}</figcaption>${mx(rows,o)}</figure>`;
+const msg=(t,k='info')=>`<div class="msg ${k}">${t}</div>`;
+const save=(label='Guardar resultado')=>`<div class="row"><span class="muted">${label}:</span><button data-act="saveto" data-to="A">en A</button><button data-act="saveto" data-to="B">en B</button></div>`;
+const calc=t=>`<div class="calc">${t}</div>`;
+
+function stepper(id,steps,sep){S.steps[id]={steps,sep,i:0};return `<div class="stepper" id="sp-${id}"></div>`}
+function drawStepper(id){
+  const s=S.steps[id],el=$('sp-'+id);if(!el)return;
+  const st=s.steps[s.i];
+  el.innerHTML=`<div class="row" style="justify-content:space-between"><span class="sec-sub">Paso ${s.i} de ${s.steps.length-1}</span>
+    <span class="row"><button data-act="sp" data-id="${id}" data-d="first">⏮</button><button data-act="sp" data-id="${id}" data-d="-1">◀ Anterior</button><button class="primary" data-act="sp" data-id="${id}" data-d="1">Siguiente ▶</button><button data-act="sp" data-id="${id}" data-d="last">⏭</button></span></div>
+    <input type="range" min="0" max="${s.steps.length-1}" value="${s.i}" data-act="range" data-id="${id}" aria-label="Paso">
+    <div class="desc">${st.desc}</div>${mx(st.rows,{sep:s.sep,pivot:st.pivot,row:st.row})}`;
+}
+const finishSteppers=()=>Object.keys(S.steps).forEach(drawStepper);
+
+/* ---------- Memoria A / B ---------- */
+function memHTML(nm){
+  const g=S[nm],m=g.length,n=g[0].length,filled=g.every(r=>r.every(valid));
+  return `<div class="card" style="padding:12px;background:var(--panel2)"><div class="mem-head"><h3>Matriz ${nm}</h3>
+    <span class="pill ${filled?'ok':'bad'}">${filled?`Cargada ${m}×${n}`:'Incompleta'}</span></div>
+    <div class="sizer" style="margin:8px 0">filas <button data-act="dim" data-m="${nm}" data-k="r" data-d="-1" aria-label="Menos filas">−</button>${m}<button data-act="dim" data-m="${nm}" data-k="r" data-d="1" aria-label="Más filas">+</button>
+    columnas <button data-act="dim" data-m="${nm}" data-k="c" data-d="-1" aria-label="Menos columnas">−</button>${n}<button data-act="dim" data-m="${nm}" data-k="c" data-d="1" aria-label="Más columnas">+</button></div>
+    <div class="grid" style="grid-template-columns:repeat(${n},minmax(52px,1fr))">${g.map((r,i)=>r.map((v,j)=>`<input class="cell ${valid(v)?'':'invalid'}" id="c${nm}${i}_${j}" data-m="${nm}" data-i="${i}" data-j="${j}" value="${v}" aria-label="${nm}[${i+1}][${j+1}]" autocomplete="off">`).join('')).join('')}</div></div>`;
+}
+function drawMem(){$('memA').innerHTML=memHTML('A');$('memB').innerHTML=memHTML('B');persist()}
+function resizeMat(nm,k,d){
+  const g=S[nm],m=g.length,n=g[0].length;
+  if(k==='r'){const nr=Math.min(8,Math.max(1,m+d));if(nr>m)g.push(Array(n).fill('0'));else g.length=nr}
+  else{const nc=Math.min(8,Math.max(1,n+d));g.forEach(r=>{if(nc>n)r.push('0');else r.length=nc})}
+}
+const setMat=(nm,rows)=>{S[nm]=rows.map(r=>r.map(String))};
+
+/* ---------- Pestañas ---------- */
+const TABS=[['ops','Sesión 1 y 9 · Operaciones'],['gauss','Sesión 3 y 4 · Gauss-Jordan'],['sys','Sesión 2, 7 y 8 · Sistemas'],['vec','Sesión 5 y 6 · Vectores'],['det','Sesión 10 y 11 · Det. e inversa'],['mod3','Módulo III · Matrices']];
+function drawTabs(){$('tabs').innerHTML=TABS.map(([k,t])=>`<button role="tab" aria-selected="${S.tab===k}" data-act="tab" data-k="${k}">${t}</button>`).join('')}
+const pick=id=>`<select id="${id}" aria-label="Matriz"><option>A</option><option>B</option></select>`;
+const selVal=(id,def='A')=>{const e=$(id);return e?e.value:def};
+
+function drawView(){
+  const f={ops:vOps,gauss:vGauss,sys:vSys,vec:vVec,det:vDet,mod3:vMod3}[S.tab];
+  S.steps={};$('view').innerHTML=f();
+  const o=S.out[S.tab];if(o&&$('out')){$('out').innerHTML=o.html;S.steps=o.steps;finishSteppers()}
+  if(S.tab==='mod3')cargarAutocomprobacion();
+}
+async function run(fn){
+  S.steps={};let html;
+  try{html=await fn()}catch(e){html=msg('✘ '+e.message,'bad')}
+  S.out[S.tab]={html,steps:S.steps};
+  if($('out')){$('out').innerHTML=html;finishSteppers()}
+}
+
+/* Sesión 1 y 9 */
+function vOps(){
+  return `<div><div class="sec-sub">Sesión 1 y 9</div><h2>Operaciones básicas y propiedades</h2></div>
+  <div class="row">
+    <button data-act="op" data-op="add">A + B</button><button data-act="op" data-op="sub">A − B</button><button data-act="op" data-op="subr">B − A</button>
+    <button data-act="op" data-op="mul">A · B</button><button data-act="op" data-op="tA">Aᵀ</button><button data-act="op" data-op="tB">Bᵀ</button>
+    <button data-act="op" data-op="dA">Diagonal de A</button><button data-act="op" data-op="dB">Diagonal de B</button></div>
+  <div class="row"><label for="esc" class="muted">Escalar c:</label><input class="txt" id="esc" value="2" size="6">
+    <button data-act="op" data-op="cA">c · A</button><button data-act="op" data-op="cB">c · B</button></div>
+  <div id="out">${msg('Elija una operación. Los resultados se pueden guardar en A o B para encadenar cálculos.')}</div>`;
+}
+function opRun(op){
+  return run(async()=>{
+    const d=await api('operacion',{op,A:S.A,B:S.B,c:$('esc')?$('esc').value:'1'});S.last=d.R;
+    const two=sym=>`<div class="mats">${fig(d.A,'A')}<span class="op">${sym}</span>${fig(d.B,'B')}<span class="op">=</span>`;
+    if(op==='add')return two('+')+fig(d.R,'A + B')+'</div>'+save();
+    if(op==='sub')return two('−')+fig(d.R,'A − B')+'</div>'+save();
+    if(op==='subr')return `<div class="mats">${fig(d.B,'B')}<span class="op">−</span>${fig(d.A,'A')}<span class="op">=</span>${fig(d.R,'B − A')}</div>`+save();
+    if(op==='mul'){
+      const ba=d.BA?`<div class="mats">${fig(d.BA,'B · A')}</div>`+msg(d.conmuta?'En este caso AB = BA, pero no ocurre en general.':'AB ≠ BA: el producto de matrices no es conmutativo.','warn'):'';
+      return two('·')+fig(d.R,'A · B')+'</div>'+save()+`<h3>Verificación automática · Sesión 9</h3><p class="muted">Propiedad de la transpuesta en el producto: (A·B)ᵀ = Bᵀ · Aᵀ</p>
+        <div class="mats">${fig(d.lhs,'(A · B)ᵀ')}<span class="op">${d.ok?'=':'≠'}</span>${fig(d.rhs,'Bᵀ · Aᵀ')}</div>`+msg(d.ok?'✔ Ambas matrices son idénticas. Propiedad demostrada.':'✘ Las matrices no coinciden.',d.ok?'ok':'bad')+ba;
+    }
+    const nm=op[1],X=nm==='A'?d.A:d.B;
+    if(op[0]==='t')return `<div class="mats">${fig(X,nm)}<span class="op">→</span>${fig(d.R,nm+'ᵀ')}</div>`+save();
+    if(op[0]==='d')return `<div class="mats">${fig(X,nm)}<span class="op">→</span>${fig(d.R,'Diagonal de '+nm)}</div>`+save();
+    return `<div class="mats"><span class="op">${d.c}</span>${fig(X,nm)}<span class="op">=</span>${fig(d.R,`(${d.c})·${nm}`)}</div>`+save();
+  });
+}
+
+/* Sesión 3 y 4 */
+function vGauss(){
+  return `<div><div class="sec-sub">Sesión 3 y 4</div><h2>Forma escalonada y existencia</h2></div>
+  <div class="row"><label for="gm" class="muted">Reducir la matriz</label>${pick('gm')}<button class="primary" data-act="gauss">Reducir paso a paso</button></div>
+  <div id="out">${msg('El pivote activo aparece en ámbar y la fila que cambia, sombreada.')}</div>`;
+}
+function gaussRun(){
+  return run(async()=>{
+    const nm=selVal('gm'),d=await api('gauss',{M:S[nm]});S.last=d.rref;
+    return stepper('g',d.pasos)+`<h3>Verificación automática · Sesión 4</h3><div class="tiles">
+      <div class="tile">Columnas<b>${d.columnas}</b></div><div class="tile">Pivotes<b>${d.pivotes}</b></div><div class="tile">Variables libres<b>${d.libres}</b></div></div>`
+      +msg(d.libres===0?'✔ Vectores linealmente independientes (L.I.): solución única.':'✘ Vectores linealmente dependientes (L.D.): hay variables libres, infinitas soluciones.',d.libres===0?'ok':'bad')
+      +`<div class="mats">${fig(d.rref,'RREF de '+nm)}</div>`+save('Guardar la RREF');
+  });
+}
+
+/* Sesión 2, 7 y 8 */
+function bInputs(){
+  const m=S.A.length;while(S.b.length<m)S.b.push('0');S.b.length=m;
+  return `<div class="grid" style="grid-template-columns:repeat(${Math.min(m,8)},minmax(64px,90px))">${S.b.map((v,i)=>`<input class="cell ${valid(v)?'':'invalid'}" data-bi="${i}" value="${v}" aria-label="b[${i+1}]">`).join('')}</div>`;
+}
+function vSys(){
+  return `<div><div class="sec-sub">Sesión 2, 7 y 8</div><h2>Sistemas de ecuaciones lineales</h2></div>
+  <p class="muted">Los coeficientes son la Matriz A de la memoria. Escriba el vector b (ejemplo cargado).</p>
+  <div><div class="sec-sub" style="margin-bottom:6px">Vector b</div><div id="bbox">${bInputs()}</div></div>
+  <div class="row"><button class="primary" data-act="sys">Resolver Ax = b</button><button data-act="sysh">Resolver homogéneo Ax = 0</button></div>
+  <div id="out">${msg('Se clasifica el sistema y se muestra la solución única o la forma paramétrica.')}</div>`;
+}
+function sysRun(hom){
+  return run(async()=>{
+    const r=await api('sistema',{A:S.A,b:S.b,homogeneo:hom});
+    let h=msg('Tipo: sistema '+(r.homogeneo?'HOMOGÉNEO (Ax = 0): siempre admite la solución trivial':'NO HOMOGÉNEO (Ax = b)'))+stepper('s',r.pasos,r.n)+'<h3>Resultado</h3>';
+    if(r.tipo==='incompatible')h+=msg('✘ SISTEMA INCOMPATIBLE: no tiene solución (aparece una fila 0 = c con c ≠ 0).','bad');
+    else if(r.tipo==='indeterminado')h+=msg(`⚠ SISTEMA COMPATIBLE INDETERMINADO: infinitas soluciones. Variables libres: ${r.libres.map(j=>'x'+j).join(', ')}`,'warn')+calc(r.parametrica.join('\n'));
+    else{h+=msg('✔ SISTEMA COMPATIBLE DETERMINADO: solución única.','ok')+calc(r.solucion.map(([c,v])=>`x${c} = ${v}`).join('\n'));S.last=r.solucion.map(([c,v])=>[v]);h+=save('Guardar el vector solución')}
+    return h;
+  });
+}
+
+/* Sesión 5 y 6 */
+function vVec(){
+  return `<div><div class="sec-sub">Sesión 5 y 6</div><h2>Ecuaciones vectoriales, combinación lineal e independencia</h2></div>
+  <p class="muted">Las columnas de la Matriz A son el conjunto de vectores v₁, v₂, …, vₖ.</p>
+  <div class="row"><button class="primary" data-act="indep">¿Son L.I. o L.D.?</button></div>
+  <div><div class="sec-sub" style="margin-bottom:6px">Vector b (combinación lineal)</div><div id="bbox">${bInputs()}</div></div>
+  <div class="row"><button data-act="comb">¿b es combinación lineal de las columnas de A?</button></div>
+  <div id="out">${msg('Elija una operación.')}</div>
+  <details><summary>Operaciones con vectores en ℝⁿ</summary><div class="row" style="margin-top:10px">
+    <label for="u" class="muted">v₁</label><input class="txt" id="u" value="1 2 3" size="10"><label for="v" class="muted">v₂</label><input class="txt" id="v" value="4 5 6" size="10">
+    <label for="kk" class="muted">k</label><input class="txt" id="kk" value="2" size="4">
+    <button data-act="vop" data-op="s">v₁ + v₂</button><button data-act="vop" data-op="p">v₁ • v₂</button><button data-act="vop" data-op="k">k·v₁</button></div><div id="vout" style="margin-top:10px"></div></details>`;
+}
+function indepRun(){
+  return run(async()=>{
+    const r=await api('independencia',{A:S.A});
+    return `<h3>Sistema homogéneo c₁v₁ + … + cₖvₖ = 0</h3>`+stepper('i',r.pasos,r.k)+`<div class="tiles"><div class="tile">Vectores<b>${r.k}</b></div><div class="tile">Pivotes<b>${r.pivotes}</b></div><div class="tile">Variables libres<b>${r.k-r.pivotes}</b></div></div>`
+     +msg(r.li?'✔ LINEALMENTE INDEPENDIENTES (L.I.): solo existe la solución trivial c = 0.':`✘ LINEALMENTE DEPENDIENTES (L.D.): ${r.k-r.pivotes} variable(s) libre(s), hay infinitas combinaciones que dan el vector cero.`,r.li?'ok':'bad');
+  });
+}
+function combRun(){
+  return run(async()=>{
+    const r=await api('sistema',{A:S.A,b:S.b,homogeneo:false});
+    let h=stepper('c',r.pasos,r.n);
+    if(r.tipo==='incompatible')h+=msg('✘ b NO es combinación lineal de los vectores dados (sistema incompatible).','bad');
+    else if(r.tipo==='indeterminado')h+=msg('✔ b SÍ es combinación lineal, de INFINITAS maneras (sistema indeterminado).','ok');
+    else h+=msg('✔ b SÍ es combinación lineal, de una ÚNICA manera:','ok')+calc(r.solucion.map(([c,v])=>`c${c} = ${v}`).join('\n'));
+    return h;
+  });
+}
+async function vecOp(op){
+  try{const r=await api('vectores',{op,u:$('u').value,v:$('v').value,k:$('kk').value});$('vout').innerHTML=calc(r.texto)}
+  catch(e){$('vout').innerHTML=msg('✘ '+e.message,'bad')}
+}
+
+/* Sesión 10 y 11 */
+function vDet(){
+  return `<div><div class="sec-sub">Sesión 10 y 11</div><h2>Determinantes, inversas y propiedades</h2></div>
+  <div class="row"><label for="dm" class="muted">Matriz</label>${pick('dm')}
+    <button class="primary" data-act="det">Determinante (3 métodos)</button><button data-act="iadj">Inversa por adjunta</button><button data-act="igj">Inversa por Gauss-Jordan</button></div>
+  <div id="out">${msg('El determinante se calcula por cofactores, Sarrus (3×3) y reducción triangular; los tres deben coincidir.')}</div>`;
+}
+const diag=(singular,n)=>singular?msg('✘ La matriz es singular (no tiene inversa): det(A) = 0','bad'):msg(`✔ La matriz es invertible: det(A) ≠ 0, tiene ${n} posiciones pivote, sus columnas son L.I. y generan ℝⁿ`,'ok');
+function detRun(){
+  return run(async()=>{
+    const nm=selVal('dm'),d=await api('determinante',{A:S[nm]}),t=d.triangular,n=d.n,vals=[];
+    let h=`<div class="mats">${fig(d.A,nm)}</div><h3>Método 1 · Expansión por cofactores (primera fila)</h3>`;
+    if(d.cofactores.aviso)h+=msg('⚠ '+d.cofactores.aviso,'warn');
+    else{vals.push(d.cofactores.valor);h+=calc(`det(A) = ${d.cofactores.terminos.map(([a,c])=>`(${a})·(${c})`).join(' + ')}\ndet(A) = ${d.cofactores.valor}`)}
+    if(d.sarrus){vals.push(d.sarrus.val);h+='<h3>Método 2 · Regla de Sarrus (solo 3×3)</h3>'+calc(`Diagonales que suman:  ${d.sarrus.pos.join(' + ')}\nDiagonales que restan: ${d.sarrus.neg.join(' + ')}\ndet(A) = ${d.sarrus.val}`)}
+    vals.push(t.det);
+    h+=`<h3>Método ${d.sarrus?3:2} · Reducción a forma triangular</h3>`+stepper('d',t.pasos)+`<div class="mats">${fig(t.U,'Forma triangular U')}</div>`+calc(`Intercambios de fila: ${t.swaps} → signo (−1)^${t.swaps}\nProducto de la diagonal: ${t.prod}\ndet(A) = ${t.det}`);
+    const same=vals.every(v=>v===vals[0]);
+    return h+msg(same?`✔ Los ${vals.length} métodos coinciden: det(A) = ${t.det}`:'✘ Los métodos NO coinciden',same?'ok':'bad')+diag(t.det==='0',n);
+  });
+}
+const invCheck=d=>`<div class="mats">${fig(d.producto,'Comprobación A · A⁻¹')}</div>`+msg(d.identidad?'✔ A · A⁻¹ = I (exacto, con fracciones)':'✘ A · A⁻¹ ≠ I',d.identidad?'ok':'bad');
+function igjRun(){
+  return run(async()=>{
+    const nm=selVal('dm'),r=await api('inversa_gj',{A:S[nm]}),n=r.n;
+    let h=`<div class="mats">${fig(r.A,nm)}</div><p class="mono">det(A) = ${r.det}</p><h3>Proceso [A | I] → [I | A⁻¹]</h3>`+stepper('j',r.pasos,n);
+    if(!r.inversa)return h+msg(`Posiciones pivote: ${r.pivotes} de ${n}. Se detiene: no hay inversa.`,'warn')+diag(true,n);
+    S.last=r.inversa;
+    return h+`<div class="mats">${fig(r.final,'Proceso final [I | A⁻¹]',{sep:n})}${fig(r.inversa,'Inversa A⁻¹')}</div>`+invCheck(r)+diag(false,n)+save('Guardar la inversa');
+  });
+}
+function iadjRun(){
+  return run(async()=>{
+    const nm=selVal('dm'),r=await api('inversa_adj',{A:S[nm]});
+    const h=`<div class="mats">${fig(r.A,nm)}</div><p class="mono">det(A) = ${r.det}</p>`;
+    if(!r.inversa)return h+diag(true,r.n);
+    S.last=r.inversa;
+    return h+`<div class="mats">${fig(r.cof,'Matriz de cofactores')}<span class="op">ᵀ→</span>${fig(r.adj,'adj(A)')}<span class="op">×</span><span class="op" style="font-size:15px">1/(${r.det})</span><span class="op">=</span>${fig(r.inversa,'A⁻¹')}</div>`
+      +invCheck(r)+msg(r.coincide?'✔ Coincide con la inversa obtenida por Gauss-Jordan':'✘ No coincide con Gauss-Jordan',r.coincide?'ok':'bad')+diag(false,r.n)+save('Guardar la inversa');
+  });
+}
+
+/* Módulo III */
+const TEOREMAS=[
+ ['Álgebra de matrices (Tarea 4)',['A + B = B + A · (A + B) + C = A + (B + C) · A + 0 = A','r(A + B) = rA + rB · (r + s)A = rA + sA · r(sA) = (rs)A','A(BC) = (AB)C · A(B + C) = AB + AC · (B + C)A = BA + CA · I·A = A = A·I','En general AB ≠ BA: el producto no es conmutativo.']],
+ ['Propiedades de la transpuesta',['(Aᵀ)ᵀ = A · (A + B)ᵀ = Aᵀ + Bᵀ · (rA)ᵀ = r·Aᵀ · (AB)ᵀ = BᵀAᵀ']],
+ ['Teorema de la inversa (Sesión 10)',['a) Si A es invertible, A⁻¹ es invertible y (A⁻¹)⁻¹ = A.','b) Si A y B son n×n invertibles, AB es invertible y (AB)⁻¹ = B⁻¹A⁻¹.','c) Si A es invertible, Aᵀ es invertible y (Aᵀ)⁻¹ = (A⁻¹)ᵀ.']],
+ ['Determinantes (Sesión 11)',['det(A) = Σ aᵢⱼ·Cᵢⱼ, con Cᵢⱼ = (−1)^(i+j)·det(Mᵢⱼ)','Intercambio de filas → −det(A) · Reemplazo Fi → Fi + k·Fj → det(A) · Fila × k → k·det(A)','Si A es triangular, det(A) es el producto de su diagonal · det(A⁻¹) = 1/det(A)']],
+ ['Teorema de la Matriz Invertible (con asterisco)',['(a) A es invertible.','(c*) A tiene n posiciones pivote.','(e*) Las columnas de A son linealmente independientes.','(h*) Las columnas de A generan ℝⁿ.','A es invertible ⇔ det(A) ≠ 0, y entonces A⁻¹ = (1/det(A))·adj(A).']]
+];
+const CASOS=[
+ ['Producto válido','A 2×3 por C 3×2 → A·C = [[5,11],[14,23]]; C·A es 3×3, así que AC ≠ CA.',[[1,2,3],[4,5,6]],[[1,0],[2,1],[0,3]],'ops','mul'],
+ ['Dimensiones incompatibles','A 2×3 y B 2×3 → «No se puede multiplicar: Columnas de A [3] ≠ Filas de B [2]».',[[1,2,3],[4,5,6]],[[1,2,3],[4,5,6]],'ops','mul'],
+ ['Invertible 3×3','det(A) = 1 y A⁻¹ = [[−24,18,5],[20,−15,−4],[−5,4,1]] por ambos métodos.',[[1,2,3],[0,1,4],[5,6,0]],[[2,0,1],[1,1,0],[0,3,1]],'det','igj'],
+ ['Invertible 2×2','adj(A) = [[4,−2],[−3,1]] y A⁻¹ = [[−2,1],[3/2,−1/2]].',[[1,2],[3,4]],[[0,1],[1,1]],'det','iadj'],
+ ['Matriz singular','det(A) = 0, solo 2 pivotes, diagnóstico «singular», sin inversa.',[[1,2,3],[4,5,6],[7,8,9]],[[2,0,1],[1,1,0],[0,3,1]],'det','igj'],
+ ['Verificador','A = [[1,2],[3,4]], B = [[0,1],[1,1]] → det(A) = −2, det(A⁻¹) = −1/2, (AB)⁻¹ = B⁻¹A⁻¹.',[[1,2],[3,4]],[[0,1],[1,1]],'mod3','ver']
+];
+function vMod3(){
+  return `<div><div class="sec-sub">Módulo III</div><h2>Módulo III · Álgebra de matrices</h2></div>
+  <h3>9 · Verificador de propiedades</h3>
+  <p class="muted">Usa A y B de la memoria (cuadradas, invertibles y del mismo orden, máximo 8 por la propiedad 6).</p>
+  <div class="row"><span class="muted">Propiedad 5, operación de fila sobre A:</span>
+    <select id="p5op" aria-label="Operación"><option value="intercambio">Fi ↔ Fj</option><option value="reemplazo" selected>Fi → Fi + k·Fj</option><option value="escala">Fi → k·Fi</option></select>
+    <label for="p5i" class="muted">i</label><input class="txt" id="p5i" value="2" size="3"><label for="p5j" class="muted">j</label><input class="txt" id="p5j" value="1" size="3">
+    <label for="p5k" class="muted">k</label><input class="txt" id="p5k" value="-3" size="5"><button class="primary" data-act="ver">Verificar las 6 propiedades</button></div>
+  <div id="out">${msg('Cada propiedad calcula ambos miembros con las mismas funciones del menú y concluye «Se cumple» o «No se cumple».')}</div>
+  <h3>Casos de prueba del enunciado</h3>
+  <div class="cases">${CASOS.map((c,i)=>`<div class="case"><b>${c[0]}</b><span class="muted" style="font-size:13.5px">${c[1]}</span><button data-act="caso" data-i="${i}">Cargar en A y B</button></div>`).join('')}</div>
+  <details open><summary id="autotitle">Autocomprobación de las clases de Python · ejecutando…</summary><div style="margin-top:8px" id="autolist"></div></details>
+  <h3>0 · Teoremas clave del módulo</h3>
+  <div class="two">${TEOREMAS.map(([t,l])=>`<div class="card" style="background:var(--panel2)"><h3 style="margin-bottom:8px">${t}</h3>${l.map(x=>`<p style="margin-bottom:4px">${x}</p>`).join('')}</div>`).join('')}</div>`;
+}
+async function cargarAutocomprobacion(){
+  try{
+    const r=await api('autocomprobacion'),ok=r.casos.every(c=>c[1]);
+    $('autotitle').textContent='Autocomprobación de las clases de Python · '+(ok?'todo coincide con el PDF ✔':'hay diferencias ✘');
+    $('autolist').innerHTML=r.casos.map(([n,k])=>`<div class="check"><span class="pill ${k?'ok':'bad'}">${k?'✔':'✘'}</span><span>${n}</span></div>`).join('');
+  }catch(e){if($('autotitle'))$('autotitle').textContent='Autocomprobación · '+e.message}
+}
+function verRun(){
+  return run(async()=>{
+    const op=$('p5op').value,r=await api('verificador',{A:S.A,B:S.B,p5:{op,i:+$('p5i').value-1,j:+$('p5j').value-1,k:$('p5k').value}});
+    const val=x=>Array.isArray(x)?mx(x):`<code class="mono">${x}</code>`;
+    return `<div class="mats">${fig(r.A,'A')}${fig(r.B,'B')}</div>`+r.props.map(p=>`<div class="prop"><header><h3>Propiedad ${p.n}: ${p.t}</h3><span class="pill ${p.ok?'ok':'bad'}">${p.ok?'Se cumple':'No se cumple'}</span></header>
+      ${p.aux.map(([t,x])=>`<div><div class="sec-sub">${t}</div>${val(x)}</div>`).join('')}
+      <div class="mats"><div><div class="sec-sub">${p.l}</div>${val(p.lv)}</div><span class="op">${p.ok?'=':'≠'}</span><div><div class="sec-sub">${p.r}</div>${val(p.rv)}</div></div></div>`).join('');
+  });
+}
+
+/* Código y documentación */
+const GUIA=[
+ 'Cada archivo .py inicia con una docstring de módulo de 3 a 5 líneas (qué hace, qué tema de clase, quiénes lo elaboraron).',
+ 'Cada función tiene una docstring de 1 a 3 líneas: qué hace, qué recibe y qué devuelve.',
+ 'Los comentarios de línea explican el porqué (decisión matemática o caso especial), no el qué.',
+ 'Nombres que se explican solos: fila_pivote y num_variables_libres, no x, aux o temp.',
+ 'Funciones de unas 25 líneas o menos, con una sola tarea. Las que calculan no usan input() ni print().',
+ 'No quedan bloques de código viejo comentado ni comentarios decorativos. El logotipo ASCII es salida del programa.',
+ 'Todos los integrantes pueden explicar cada función con sus propias palabras.'
+];
+const ARCH=[
+ ['main.py','CalculadoraAlgebraLineal','Abre esta página en el navegador (o el menú de consola con --consola).'],
+ ['modulos/servidor_web.py','ManejadorHTTP · ServidorWeb','Servidor local (solo biblioteca estándar) que entrega la página y atiende /api.'],
+ ['modulos/servicio_web.py','Serializador · Lector · ServicioAlgebra · CasosDePrueba','Traduce los datos de la página a Matriz y Fraction, llama a las clases y devuelve JSON.'],
+ ['modulos/interfaz.py','Estilo · Consola · Entrada','Colores, recuadros y lectura validada para la versión de consola.'],
+ ['modulos/memoria.py','MemoriaMatrices · AsistenteMemoria','Guarda A y B en la consola, ofrece reutilizarlas y encadenar resultados.'],
+ ['modulos/reduccion.py','ReductorFilas','Un solo motor de Gauss-Jordan para sistemas, inversas e independencia, con pasos registrados.'],
+ ['modulos/modulo_matrices.py','Validador · Matriz · Determinante · InversaGaussJordan · InversaAdjunta · VerificadorPropiedades · MenuMatrices','Módulo III completo. La lógica no usa print() ni input(); solo la parte de interfaz.'],
+ ['modulos/sesion_01_09_operaciones.py','MenuOperaciones','Suma, resta, producto con (AB)ᵀ = BᵀAᵀ, transpuesta, escalar, diagonal.'],
+ ['modulos/sesion_03_04_gauss.py','MenuGauss','Reducción paso a paso y análisis de pivotes.'],
+ ['modulos/sesion_02_07_08_sistemas.py','SistemaLineal · MenuSistemas','Clasifica el sistema; solución única o forma paramétrica.'],
+ ['modulos/sesion_05_06_vectores.py','IndependenciaLineal · OperacionesVector · DemostradorPropiedades · MenuVectores','L.I./L.D., combinación lineal y demostraciones numéricas.'],
+ ['modulos/sesion_10_11_det_inversa.py','MenuDetInversa','Determinante e inversas sobre las matrices en memoria.'],
+ ['interfaz/index.html','—','Esta página: solo dibuja; todos los cálculos los hace Python.'],
+ ['teoremas/','teoremas_modulo3 · teoremas_vectores','Textos de la opción 0 (Teoremas Clave).']
+];
+function vCode(){
+  let saved={};try{saved=JSON.parse(localStorage.getItem('motor-guia')||'{}')}catch(e){}
+  const n=GUIA.filter((_,i)=>saved[i]).length;
+  return `<div><div class="sec-sub">Estructura del proyecto</div><h2>Código segmentado en clases</h2></div>
+  <div class="tiles"><div class="tile">Archivos .py<b>14</b></div><div class="tile">Funciones ≤ 25 líneas<b>100 %</b></div><div class="tile">Líneas con comentario<b>2.6 %</b><span class="muted" style="font-size:12px">alerta si pasa de 20 %</span></div><div class="tile">Librerías externas<b>0</b></div></div>
+  <div style="overflow-x:auto"><table><thead><tr><th>Archivo</th><th>Clases</th><th>Responsabilidad</th></tr></thead><tbody>
+  ${ARCH.map(([f,c,r])=>`<tr><td class="mono">${f}</td><td class="mono" style="font-size:12.5px">${c}</td><td>${r}</td></tr>`).join('')}</tbody></table></div>
+  <h3>Guía de documentación: comentar con criterio</h3>
+  <p class="muted">El código dice qué hace; el comentario explica por qué lo hace así.</p>
+  <div id="guia">${GUIA.map((t,i)=>`<label class="check"><input type="checkbox" data-g="${i}" ${saved[i]?'checked':''}><span>${t}</span></label>`).join('')}</div>
+  <div class="pill ok" id="gcount">${n} de ${GUIA.length} verificados</div>
+  <div class="two"><div><div class="sec-sub" style="margin-bottom:6px">Evitar: el comentario repite el código</div><pre class="code">def producto(A, B):
+    # creamos el resultado
+    R = []
+    # recorremos filas de A
+    for i in range(len(A)):
+        # variable suma
+        s = 0
+        # sumamos A[i][k] por B[k][j]
+        ...</pre></div>
+  <div><div class="sec-sub" style="margin-bottom:6px">Lo esperado: docstring y solo el porqué</div><pre class="code">def producto(self, otra):
+    """Devuelve A·B (m×p). Requiere columnas
+    de A == filas de B."""
+    Validador.producto_posible(...)
+    ...
+        # Elemento (i, j) = fila i de A
+        # por columna j de B
+        fila.append(sum(...))</pre></div></div>`;
+}
+
+/* ---------- Eventos ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-act]');if(!t)return;
+  const a=t.dataset.act,d=t.dataset;
+  if(a==='tab'){S.tab=d.k;drawTabs();drawView();return}
+  if(a==='dim'){resizeMat(d.m,d.k,+d.d);drawMem();const b=$('bbox');if(b)b.innerHTML=bInputs();return}
+  if(a==='swap'){[S.A,S.B]=[S.B,S.A];drawMem();return}
+  if(a==='clear'){S.A=S.A.map(r=>r.map(()=>'0'));S.B=S.B.map(r=>r.map(()=>'0'));drawMem();return}
+  if(a==='sp'){const s=S.steps[d.id],last=s.steps.length-1;s.i=d.d==='first'?0:d.d==='last'?last:Math.min(last,Math.max(0,s.i+ +d.d));drawStepper(d.id);return}
+  if(a==='saveto'){if(S.last){setMat(d.to,S.last);drawMem();const b=$('bbox');if(b)b.innerHTML=bInputs();t.textContent='✔ guardado en '+d.to}return}
+  if(a==='op')opRun(d.op);
+  if(a==='gauss')gaussRun();
+  if(a==='sys')sysRun(false);
+  if(a==='sysh')sysRun(true);
+  if(a==='indep')indepRun();
+  if(a==='comb')combRun();
+  if(a==='vop')vecOp(d.op);
+  if(a==='det')detRun();
+  if(a==='igj')igjRun();
+  if(a==='iadj')iadjRun();
+  if(a==='ver')verRun();
+  if(a==='caso'){
+    const c=CASOS[+d.i];setMat('A',c[2]);setMat('B',c[3]);drawMem();S.tab=c[4];drawTabs();drawView();
+    if(c[5]==='mul')opRun('mul');else if(c[5]==='ver')verRun();else if(c[5]==='igj')igjRun();else if(c[5]==='iadj')iadjRun();
+    $('view').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.act==='range'){const s=S.steps[t.dataset.id];s.i=+t.value;drawStepper(t.dataset.id);return}
+  if(t.classList.contains('cell')&&t.dataset.m){S[t.dataset.m][+t.dataset.i][+t.dataset.j]=t.value;t.classList.toggle('invalid',!valid(t.value));persist();return}
+  if(t.dataset.bi!==undefined){S.b[+t.dataset.bi]=t.value;t.classList.toggle('invalid',!valid(t.value));persist()}
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.g!==undefined){
+    let saved={};try{saved=JSON.parse(localStorage.getItem('motor-guia')||'{}')}catch(x){}
+    saved[t.dataset.g]=t.checked;try{localStorage.setItem('motor-guia',JSON.stringify(saved))}catch(x){}
+    $('gcount').textContent=`${GUIA.filter((_,i)=>saved[i]).length} de ${GUIA.length} verificados`;
+  }
+});
+drawMem();drawTabs();drawView();
+</script>
+
+</body></html>
