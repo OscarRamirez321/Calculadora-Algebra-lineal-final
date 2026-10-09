@@ -1,116 +1,67 @@
-from fractions import Fraction
-from modulos import utilidades as util
-
-# --- FUNCIONES MATEMÁTICAS PURAS ---
-
-def gauss_jordan_paso_a_paso(matriz):
-    """Lleva la matriz a su forma RREF guardando el historial de operaciones."""
-    # Hacemos una copia profunda para no modificar la original
-    M = [[val for val in fila] for fila in matriz]
-    filas = len(M)
-    cols = len(M[0])
-    pivotes = 0
-    r = 0
-    pasos = [] # Aquí guardamos el chisme de cada paso
-
-    pasos.append(("Matriz Original", [f[:] for f in M]))
-
-    for c in range(cols):
-        if r >= filas: break
-        
-        # 1. Buscar el pivote
-        pivot_row = r
-        while pivot_row < filas and M[pivot_row][c] == Fraction(0):
-            pivot_row += 1
-            
-        if pivot_row == filas: continue # No hay pivote en esta columna
-            
-        # 2. Intercambio de filas si el pivote está más abajo
-        if pivot_row != r:
-            M[r], M[pivot_row] = M[pivot_row], M[r]
-            pasos.append((f"Intercambio: Fila {r+1} <-> Fila {pivot_row+1}", [f[:] for f in M]))
-        
-        # 3. Normalizar el pivote para que sea 1
-        pivot_val = M[r][c]
-        if pivot_val != Fraction(1):
-            M[r] = [elem / pivot_val for elem in M[r]]
-            pasos.append((f"Normalizar Pivote: Fila {r+1} dividida entre {pivot_val}", [f[:] for f in M]))
-        
-        # 4. Hacer ceros en el resto de la columna (arriba y abajo)
-        for i in range(filas):
-            if i != r and M[i][c] != Fraction(0):
-                factor = M[i][c]
-                M[i] = [M[i][j] - factor * M[r][j] for j in range(cols)]
-                pasos.append((f"Hacer Cero: Fila {i+1} -> Fila {i+1} - ({factor}) * Fila {r+1}", [f[:] for f in M]))
-                
-        r += 1
-        pivotes += 1
-        
-    variables_libres = cols - pivotes
-    return M, pivotes, variables_libres, pasos
+"""Sesiones 3 y 4: forma escalonada reducida (RREF) y existencia de soluciones.
+Reduce por Gauss-Jordan la matriz elegida, muestra el proceso paso a paso y analiza
+pivotes y variables libres para decidir independencia lineal.
+Elaborado por: [Integrantes del grupo: completar nombres].
+"""
+from .interfaz import Consola, Entrada, Estilo
+from .modulo_matrices import ErrorMatriz, Matriz
+from .reduccion import ReductorFilas
 
 
-# --- CONTROLADOR DEL MENÚ ---
+class MenuGauss:
+    """Menú de las Sesiones 3 y 4 sobre una matriz de la memoria."""
 
-def ejecutar(memoria):
-    util.limpiar_pantalla()
-    print(f"{util.Color.CYAN}{util.Color.BOLD}--- SESIÓN 3 y 4: FORMA ESCALONADA Y EXISTENCIA ---{util.Color.END}")
-    print("1. Reducción Gauss-Jordan (Paso a Paso detallado)")
-    print("2. Análisis Rápido (RREF directo, Pivotes y L.I. / L.D.)")
-    print(f"{util.Color.RED}0. Regresar al Menú Principal{util.Color.END}")
+    def __init__(self, asistente):
+        """Recibe el AsistenteMemoria con el que lee y guarda matrices."""
+        self.memoria = asistente
 
-    sub = input("\nSeleccione la operación >> ")
+    def ejecutar(self):
+        """Muestra el menú, reduce la matriz elegida y analiza el resultado."""
+        Consola.limpiar()
+        Consola.encabezado("SESIÓN 3 Y 4 · FORMA ESCALONADA Y EXISTENCIA")
+        Consola.opcion("1", "Reducción Gauss-Jordan (paso a paso detallado)")
+        Consola.opcion("2", "Análisis rápido (RREF directo, pivotes y L.I. / L.D.)")
+        Consola.opcion("0", "Regresar al menú principal")
+        opcion = Entrada.opcion("\n  Seleccione la operación: ", ["1", "2", "0"])
+        if opcion == "0":
+            return
+        try:
+            letra = self.memoria.pedir_letra("¿A cuál matriz querés aplicar Gauss-Jordan? (A / B): ")
+            matriz = self.memoria.requerir(letra)
+            self._reducir_y_analizar(matriz, letra, paso_a_paso=(opcion == "1"))
+        except ErrorMatriz as error:
+            Consola.error(str(error))
+        Consola.pausar()
 
-    if sub == '0':
-        return
-
-    try:
-        letra = input("¿A cuál matriz querés aplicarle Gauss-Jordan? (A / B): ").strip().upper()
-        M = memoria.get(letra)
-        
-        if not M:
-            raise ValueError(f"La Matriz {letra} está vacía. Cargala primero en la Opción 1.")
-
-        rref, pivotes, libres, pasos = gauss_jordan_paso_a_paso(M)
-
-        if sub == '1':
-            print(f"\n{util.Color.YELLOW}--- INICIANDO REDUCCIÓN POR FILAS ---{util.Color.END}")
-            for i, (descripcion, estado_matriz) in enumerate(pasos):
-                # Imprimimos la operación que se hizo y cómo quedó la matriz
-                util.imprimir_matriz(estado_matriz, f"Paso {i}: {descripcion}")
-                if i < len(pasos) - 1:
-                    input(f"{util.Color.CYAN}[Enter para ver el siguiente paso...]{util.Color.END}")
-            
-            util.imprimir_exito("Reducción a Forma Escalonada Reducida (RREF) completada.")
-
-        elif sub == '2':
-            # Solo muestra el final y el análisis de la Sesión 4
-            util.imprimir_matriz(rref, f"Matriz RREF de {letra}")
-
-        # --- TEOREMA EN VIVO (SESIÓN 4 - Condición de Existencia y Unicidad) ---
-        util.imprimir_teorema("4", "Análisis de Unicidad e Independencia Lineal")
-        print(f"Número de Columnas (Variables): {len(M[0])}")
-        print(f"Número de Pivotes hallados: {util.Color.YELLOW}{pivotes}{util.Color.END}")
-        print(f"Variables Libres: {util.Color.YELLOW}{libres}{util.Color.END}")
-        
-        if libres == 0:
-            print(f"\n{util.Color.GREEN}✅ Veredicto: VECTORES LINEALMENTE INDEPENDIENTES (L.I.){util.Color.END}")
-            print("El sistema tiene SOLUCIÓN ÚNICA (trivial si es homogéneo).")
+    def _reducir_y_analizar(self, matriz, letra, paso_a_paso):
+        """Reduce la matriz, muestra el proceso pedido y el teorema de unicidad."""
+        reduccion = ReductorFilas(matriz.datos).reducir()
+        if paso_a_paso:
+            self._mostrar_pasos(reduccion.pasos)
         else:
-            print(f"\n{util.Color.RED}❌ Veredicto: VECTORES LINEALMENTE DEPENDIENTES (L.D.){util.Color.END}")
-            print("Existen variables libres, por lo tanto hay INFINITAS SOLUCIONES.")
+            Consola.matriz(reduccion.filas, f"Matriz RREF de {letra}")
+        self._teorema_unicidad(matriz, reduccion)
+        self.memoria.ofrecer_guardar(Matriz(reduccion.filas), "la matriz reducida (RREF)")
 
-        # Preguntar si guardamos la RREF
-        print(f"\n{util.Color.YELLOW}¿Querés guardar la matriz reducida (RREF) en memoria?{util.Color.END}")
-        opc = input("Guardar en (A) / Guardar en (B) / (N)o guardar: ").strip().upper()
-        if opc == 'A':
-            memoria['A'] = rref
-            util.imprimir_exito("Matriz reducida guardada como nueva Matriz A.")
-        elif opc == 'B':
-            memoria['B'] = rref
-            util.imprimir_exito("Matriz reducida guardada como nueva Matriz B.")
+    @staticmethod
+    def _mostrar_pasos(pasos):
+        """Muestra cada paso y espera Enter, para poder seguirlos con calma."""
+        Consola.seccion("Iniciando reducción por filas")
+        for numero, paso in enumerate(pasos):
+            Consola.matriz(paso.filas, f"Paso {numero}: {paso.descripcion}")
+            if numero < len(pasos) - 1:
+                input(Estilo.pintar("  [Enter para ver el siguiente paso...]", Estilo.TENUE))
+        Consola.exito("Reducción a forma escalonada reducida (RREF) completada.")
 
-    except Exception as e:
-        util.imprimir_error(str(e))
-    
-    input(f"\n{util.Color.CYAN}Presiona ENTER para regresar...{util.Color.END}")
+    @staticmethod
+    def _teorema_unicidad(matriz, reduccion):
+        """Sesión 4: pivotes y variables libres deciden si las columnas son L.I."""
+        pivotes = len(reduccion.columnas_pivote)
+        libres = matriz.columnas - pivotes
+        Consola.encabezado("VERIFICACIÓN AUTOMÁTICA · SESIÓN 4", Estilo.MAGENTA)
+        print("  Análisis de unicidad e independencia lineal")
+        print(f"  Columnas (variables): {matriz.columnas} | Pivotes: {pivotes} | Variables libres: {libres}")
+        if libres == 0:
+            Consola.exito("VECTORES LINEALMENTE INDEPENDIENTES (L.I.): solución única.")
+        else:
+            Consola.error("VECTORES LINEALMENTE DEPENDIENTES (L.D.): hay variables libres, infinitas soluciones.")

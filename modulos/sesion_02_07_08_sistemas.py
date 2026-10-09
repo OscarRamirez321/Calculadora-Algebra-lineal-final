@@ -1,117 +1,161 @@
+"""Sesiones 2, 7 y 8: sistemas de ecuaciones lineales Ax = b.
+Clasifica el sistema (homogéneo o no, compatible o no), da la solución única o la
+forma paramétrica y sigue el proceso de Gauss-Jordan sobre [A | b].
+Elaborado por: [Integrantes del grupo: completar nombres].
+"""
+from dataclasses import dataclass
 from fractions import Fraction
-from modulos import utilidades as util
-from modulos.sesion_03_04_gauss import gauss_jordan_paso_a_paso
 
-# --- LÓGICA DE SISTEMAS ---
+from .interfaz import Consola, Entrada
+from .modulo_matrices import ErrorMatriz, Matriz
+from .reduccion import ReductorFilas
 
-def construir_aumentada(A, b):
-    """Une la matriz de coeficientes A con el vector de resultados b: [A | b]"""
-    if len(A) != len(b):
-        raise ValueError("El número de filas de A debe coincidir con el número de elementos de b.")
-    
-    aumentada = []
-    for i in range(len(A)):
-        aumentada.append(A[i][:] + [b[i][0]])
-    return aumentada
 
-def analizar_sistema(A, b, rref):
-    """Clasifica el sistema y extrae las soluciones si las hay."""
-    filas = len(A)
-    cols_variables = len(A[0])
-    
-    # 1. Comprobar si es Homogéneo o No Homogéneo
-    es_homogeneo = all(val[0] == Fraction(0) for val in b)
-    print(f"\n{util.Color.YELLOW}--- CLASIFICACIÓN DEL SISTEMA ---{util.Color.END}")
-    if es_homogeneo:
-        print("Tipo: SISTEMA HOMOGÉNEO (Ax = 0). Siempre tiene al menos la solución trivial.")
-    else:
-        print("Tipo: SISTEMA NO HOMOGÉNEO (Ax = b).")
+@dataclass
+class DiagnosticoSistema:
+    """Clasificación de un sistema: tipo, variables libres y solución única."""
+    tipo: str  # "incompatible", "determinado" o "indeterminado"
+    variables_libres: list
+    solucion: dict  # índice de variable -> valor (solo si es determinado)
 
-    # 2. Buscar inconsistencias (0 = constante no nula)
-    inconsistente = False
-    for i in range(filas):
-        # Si toda la fila de variables es 0 pero el término independiente no lo es
-        todo_cero = all(rref[i][j] == Fraction(0) for j in range(cols_variables))
-        if todo_cero and rref[i][-1] != Fraction(0):
-            inconsistente = True
-            break
-            
-    if inconsistente:
-        print(f"{util.Color.RED}❌ SISTEMA INCOMPATIBLE: No tiene solución (las rectas/planos son paralelos o no se cruzan).{util.Color.END}")
-        return None
 
-    # 3. Contar pivotes reales en la parte de las variables
-    pivotes = 0
-    for i in range(filas):
-        for j in range(cols_variables):
-            if rref[i][j] == Fraction(1):
-                # Verificamos que sea el primer elemento no nulo de la fila
-                if all(rref[i][k] == Fraction(0) for k in range(j)):
-                    pivotes += 1
-                    break
+class SistemaLineal:
+    """Sistema Ax = b representado por su matriz aumentada [A | b]."""
 
-    # 4. Veredicto Final
-    variables_libres = cols_variables - pivotes
-    if variables_libres == 0:
-        print(f"{util.Color.GREEN}✅ SISTEMA COMPATIBLE DETERMINADO: Solución Única.{util.Color.END}")
-        soluciones = [[rref[i][-1]] for i in range(cols_variables)]
-        return soluciones
-    else:
-        print(f"{util.Color.YELLOW}⚠️ SISTEMA COMPATIBLE INDETERMINADO: Infinitas Soluciones.{util.Color.END}")
-        print(f"El sistema tiene {variables_libres} variable(s) libre(s).")
-        return None
+    def __init__(self, aumentada):
+        """Recibe las filas de [A | b]; la última columna es b."""
+        self.aumentada = aumentada
+        self.num_variables = len(aumentada[0]) - 1
 
-# --- CONTROLADOR DEL MENÚ ---
+    @classmethod
+    def desde_matriz(cls, coeficientes, terminos_independientes):
+        """Arma [A | b] a partir de una Matriz A y la lista de términos b."""
+        if coeficientes.filas != len(terminos_independientes):
+            raise ErrorMatriz(
+                f"A tiene {coeficientes.filas} filas y b tiene {len(terminos_independientes)} términos")
+        return cls([fila + [b] for fila, b in zip(coeficientes.datos, terminos_independientes)])
 
-def ejecutar(memoria):
-    util.limpiar_pantalla()
-    print(f"{util.Color.CYAN}{util.Color.BOLD}--- SESIONES 2, 7 y 8: SISTEMAS DE ECUACIONES LINEALES ---{util.Color.END}")
-    print("1. Resolver Sistema Ax = b (Requiere Matriz A como coeficientes)")
-    print(f"{util.Color.RED}0. Regresar al Menú Principal{util.Color.END}")
+    def es_homogeneo(self):
+        """Indica si todos los términos independientes son cero (Ax = 0)."""
+        return all(fila[-1] == 0 for fila in self.aumentada)
 
-    sub = input("\nSeleccione la operación >> ")
-    if sub == '0': return
+    def reducir(self):
+        """Lleva [A | b] a forma escalonada reducida y devuelve un ResultadoReduccion."""
+        # b no puede ser columna pivote: un pivote ahí significaría 0 = 1 (sin solución)
+        return ReductorFilas(self.aumentada, self.num_variables).reducir()
 
-    try:
-        if sub == '1':
-            M = memoria.get('A')
-            if not M:
-                raise ValueError("Primero debes cargar la Matriz A (Coeficientes) en el Menú Principal.")
-            
-            filas_a = len(M)
-            print(f"\n{util.Color.BOLD}--- Ingresando Vector b (Términos Independientes) ---{util.Color.END}")
-            print(f"El vector debe tener exactamente {filas_a} filas para coincidir con la Matriz A.")
-            
-            vector_b = []
-            for i in range(filas_a):
-                val = input(f"Término b[{i+1}]: ")
-                vector_b.append([Fraction(val)])
-                
-            # Mostramos el sistema planteado
-            util.imprimir_matriz(M, "Matriz de Coeficientes (A)")
-            util.imprimir_matriz(vector_b, "Vector de Resultados (b)")
-            
-            # Construir y reducir [A|b]
-            aumentada = construir_aumentada(M, vector_b)
-            rref, _, _, pasos = gauss_jordan_paso_a_paso(aumentada)
-            
-            print(f"\n{util.Color.CYAN}Reduciendo matriz aumentada por Gauss-Jordan...{util.Color.END}")
-            util.imprimir_matriz(rref, "Matriz Aumentada RREF [A | b]")
-            
-            # Analizamos e interpretamos
-            solucion = analizar_sistema(M, vector_b, rref)
-            
-            if solucion:
-                util.imprimir_matriz(solucion, "Solución Exacta del Sistema (Vector x)")
-                
-                # PREGUNTAR PARA GUARDAR
-                print(f"\n{util.Color.YELLOW}¿Querés guardar este vector de solución en la memoria B?{util.Color.END}")
-                opc = input("Guardar en (B) / (N)o guardar: ").strip().upper()
-                if opc == 'B':
-                    memoria['B'] = solucion
-                    util.imprimir_exito("Vector guardado como nueva Matriz B.")
+    def diagnosticar(self, reduccion):
+        """Clasifica el sistema ya reducido y devuelve un DiagnosticoSistema."""
+        n = self.num_variables
+        if self._tiene_fila_imposible(reduccion.filas):
+            return DiagnosticoSistema("incompatible", [], {})
+        pivotes = reduccion.columnas_pivote
+        libres = [j for j in range(n) if j not in pivotes]
+        if libres:
+            return DiagnosticoSistema("indeterminado", libres, {})
+        solucion = {columna: reduccion.filas[i][n] for i, columna in enumerate(pivotes)}
+        return DiagnosticoSistema("determinado", [], solucion)
 
-    except Exception as e:
-        util.imprimir_error(str(e))
-    
-    input(f"\n{util.Color.CYAN}Presiona ENTER para regresar...{util.Color.END}")
+    def _tiene_fila_imposible(self, filas):
+        """Detecta filas del tipo [0 ... 0 | c] con c ≠ 0, que equivalen a 0 = c."""
+        n = self.num_variables
+        return any(all(fila[j] == 0 for j in range(n)) and fila[n] != 0 for fila in filas)
+
+    def forma_parametrica(self, reduccion, diagnostico):
+        """Devuelve {variable: (constante, {libre: coeficiente})} de un sistema indeterminado.
+        De la fila de un pivote x_p = b - Σ a_pj·x_j, por eso los coeficientes cambian de signo."""
+        n = self.num_variables
+        expresiones = {}
+        for fila, columna in zip(reduccion.filas, reduccion.columnas_pivote):
+            coeficientes = {j: -fila[j] for j in diagnostico.variables_libres if fila[j] != 0}
+            expresiones[columna] = (fila[n], coeficientes)
+        for j in diagnostico.variables_libres:
+            expresiones[j] = (Fraction(0), {j: Fraction(1)})
+        return dict(sorted(expresiones.items()))
+
+
+class MenuSistemas:
+    """Menú de las Sesiones 2, 7 y 8: resolver sistemas con A de la memoria o nuevos."""
+
+    def __init__(self, asistente):
+        """Recibe el AsistenteMemoria con el que lee y guarda matrices."""
+        self.memoria = asistente
+
+    def ejecutar(self):
+        """Muestra el menú y resuelve el sistema elegido."""
+        Consola.limpiar()
+        Consola.encabezado("SESIONES 2, 7 Y 8 · SISTEMAS DE ECUACIONES LINEALES")
+        Consola.opcion("1", "Resolver Ax = b (usa la Matriz A de la memoria como coeficientes)")
+        Consola.opcion("2", "Ingresar un sistema nuevo completo [A | b]")
+        Consola.opcion("0", "Regresar al menú principal")
+        opcion = Entrada.opcion("\n  Seleccione la operación: ", ["1", "2", "0"])
+        if opcion == "0":
+            return
+        try:
+            sistema = self._sistema_de_memoria() if opcion == "1" else self._sistema_nuevo()
+            self._resolver(sistema)
+        except ErrorMatriz as error:
+            Consola.error(str(error))
+        Consola.pausar()
+
+    def _sistema_de_memoria(self):
+        """Toma A de la memoria y pide el vector b."""
+        a = self.memoria.requerir("A")
+        Consola.matriz(a.datos, "Matriz de coeficientes (A)")
+        b = Entrada.fila(f"  Vector b ({a.filas} términos independientes): ", a.filas)
+        return SistemaLineal.desde_matriz(a, b)
+
+    @staticmethod
+    def _sistema_nuevo():
+        """Pide m, n y cada ecuación completa (coeficientes y b)."""
+        m = Entrada.entero_positivo("  Número de ecuaciones (m): ")
+        n = Entrada.entero_positivo("  Número de variables (n): ")
+        Consola.info(f"Escriba cada ecuación: {n} coeficientes y luego el término independiente b.")
+        return SistemaLineal([Entrada.fila(f"    Ecuación {i + 1}: ", n + 1) for i in range(m)])
+
+    def _resolver(self, sistema):
+        """Clasifica, reduce, muestra el proceso y la solución del sistema."""
+        tipo = "HOMOGÉNEO (Ax = 0): siempre admite la solución trivial" if sistema.es_homogeneo() \
+            else "NO HOMOGÉNEO (Ax = b)"
+        Consola.seccion("Clasificación del sistema")
+        print(f"  Tipo: SISTEMA {tipo}")
+        reduccion = sistema.reducir()
+        self._mostrar_proceso(reduccion, sistema.num_variables)
+        diagnostico = sistema.diagnosticar(reduccion)
+        Consola.seccion("Resultado")
+        self._mostrar_diagnostico(sistema, reduccion, diagnostico)
+
+    @staticmethod
+    def _mostrar_proceso(reduccion, num_variables):
+        """Muestra la matriz aumentada original y su forma reducida [A | b]."""
+        Consola.matriz(reduccion.pasos[0].filas, "Matriz aumentada [A | b]", num_variables)
+        Consola.matriz(reduccion.filas, "Forma reducida RREF [A | b]", num_variables)
+        if Entrada.si_no("  ¿Ver el paso a paso?"):
+            for numero, paso in enumerate(reduccion.pasos[1:], start=1):
+                Consola.matriz(paso.filas, f"Paso {numero}: {paso.descripcion}", num_variables)
+
+    def _mostrar_diagnostico(self, sistema, reduccion, diagnostico):
+        """Imprime el veredicto y la solución (única o paramétrica)."""
+        if diagnostico.tipo == "incompatible":
+            Consola.error("SISTEMA INCOMPATIBLE: no tiene solución (aparece una fila 0 = c con c ≠ 0).")
+        elif diagnostico.tipo == "indeterminado":
+            nombres = ", ".join(f"x{j + 1}" for j in diagnostico.variables_libres)
+            Consola.aviso(f"SISTEMA COMPATIBLE INDETERMINADO: infinitas soluciones. Variables libres: {nombres}")
+            for variable, (constante, coeficientes) in sistema.forma_parametrica(reduccion, diagnostico).items():
+                print(f"  x{variable + 1} = {self._expresion(constante, coeficientes)}")
+        else:
+            Consola.exito("SISTEMA COMPATIBLE DETERMINADO: solución única.")
+            for columna, valor in diagnostico.solucion.items():
+                print(f"  x{columna + 1} = {valor}")
+            self.memoria.ofrecer_guardar(
+                Matriz([[valor] for valor in diagnostico.solucion.values()]), "el vector solución")
+
+    @staticmethod
+    def _expresion(constante, coeficientes):
+        """Escribe 'c + a·x2 − b·x3' (los parámetros se llaman como la variable libre)."""
+        partes = [str(constante)] if constante != 0 or not coeficientes else []
+        for libre, coeficiente in coeficientes.items():
+            signo = "-" if coeficiente < 0 else "+"
+            termino = f"{abs(coeficiente)}·x{libre + 1}" if abs(coeficiente) != 1 else f"x{libre + 1}"
+            partes.append(f"{signo} {termino}" if partes else (f"-{termino}" if signo == "-" else termino))
+        return " ".join(partes)
